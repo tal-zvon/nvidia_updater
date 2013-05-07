@@ -18,14 +18,6 @@ uninstall() {
 	#Delete rc.local changes
 	sed -i --follow-symlinks '/nvidia/d' /etc/rc.local
 
-	#Undo grub.conf changes
-	GRUB_CONF=$(find /boot/grub/ -iname "*.orig")
-	if [[ -n $GRUB_CONF ]]
-	then
-		rm ${GRUB_CONF%.orig}
-		mv ${GRUB_CONF} ${GRUB_CONF%.orig}
-	fi
-
 	if [ -e /usr/src/nvidia/nvidia-driver ]
 	then
 		echo -n "Do you want to remove the NVIDIA driver that you downloaded and renamed (/usr/src/nvidia/nvidia-driver)? [Y/n]: " | fmt -w `tput cols`
@@ -91,13 +83,6 @@ cat << 'nvidia_update'
 /usr/src/nvidia/nvidia-driver --update
 echo "If the driver installed fine, you should reboot now"
 
-#Undo grub.conf changes
-GRUB_CONF=$(find /boot/grub/ -iname "*.orig")
-if [[ -n $GRUB_CONF ]]
-then
-        rm ${GRUB_CONF%.orig}
-        mv ${GRUB_CONF} ${GRUB_CONF%.orig}
-fi
 #Undo tty2.conf changes
 TTY_CONF=/etc/init/tty2.conf.orig
 if [[ -e $TTY_CONF ]]
@@ -127,7 +112,6 @@ echo 'exit 0' >> /etc/rc.local
 #Modify tty2.conf to run the nvidia_update.sh script instead of asking for login credentials
 sed -i.orig -e 's/respawn/#respawn/g' -e 's/\(exec.*\)/#\1/g' /etc/init/tty2.conf
 echo 'exec /sbin/getty -8 38400 tty2 -n -l /usr/src/nvidia/nvidia_update.sh' >> /etc/init/tty2.conf
-sed -i.orig -e 's/ quiet//g' -e 's/ rhgb//g' -e 's/ splash//g' $(find /boot/grub/ ! -type l -name 'grub.cfg' -o ! -type l -name 'menu.lst' -o ! -type l -name 'grub.conf')
 postinst
 ) | sudo tee /etc/kernel/postinst.d/nvidia >/dev/null
 
