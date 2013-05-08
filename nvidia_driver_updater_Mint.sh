@@ -16,7 +16,7 @@ uninstall() {
 	[ -d /etc/kernel/ ] && sudo rmdir /etc/kernel 2>/dev/null
 
 	#Delete rc.local changes
-	sed -i --follow-symlinks '/nvidia/d' /etc/rc.local
+	sudo sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
 	if [ -e /usr/src/nvidia/nvidia-driver ]
 	then
@@ -29,7 +29,7 @@ uninstall() {
 			sudo rm /usr/src/nvidia/nvidia-driver
 			;;
 			*)
-			echo "You chose NOT to remove /usr/src/nvidia/nvidia-driver. If you chose to do so manually in the future, you can safely remove /usr/src/nvidia, as this is a folder this script created." | fmt -w `tput cols`
+			echo "You chose NOT to remove /usr/src/nvidia/nvidia-driver. If you want to do so manually in the future, you can safely remove /usr/src/nvidia, as this is a folder this script created." | fmt -w `tput cols`
 			DNR='true'
 			;;
 		esac
@@ -40,6 +40,7 @@ uninstall() {
 		[ -d /usr/src/nvidia ] && sudo rmdir /usr/src/nvidia 2>/dev/null
 	fi
 
+	echo
 	echo "Uninstall complete"
 }
 
@@ -81,7 +82,6 @@ sudo chmod a+x /usr/src/nvidia/nvidia-driver
 cat << 'nvidia_update'
 #!/bin/bash
 /usr/src/nvidia/nvidia-driver --update
-echo "If the driver installed fine, you should reboot now"
 
 #Undo tty2.conf changes
 TTY_CONF=/etc/init/tty2.conf.orig
@@ -93,6 +93,19 @@ fi
 
 #Delete rc.local changes
 sed -i --follow-symlinks '/chvt/d' /etc/rc.local
+
+#Reboot
+echo -n "Do you want to reboot? [Y/n]: " | fmt -w `tput cols`
+read answer
+	
+case "$answer" in
+	""|y|Y)
+	reboot
+	;;
+	*)
+	/bin/chvt 1
+	;;
+esac
 nvidia_update
 ) | sudo tee /usr/src/nvidia/nvidia_update.sh >/dev/null
 
