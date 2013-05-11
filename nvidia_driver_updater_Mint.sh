@@ -7,6 +7,7 @@ usage() {
          echo "-h, --help		display this usage guide"
 }
 
+#Undoes everything the script does
 uninstall() {
 	[ -e /usr/src/nvidia/nvidia_update.sh ] && sudo rm /usr/src/nvidia/nvidia_update.sh
 	[ -e /etc/kernel/postinst.d/nvidia ] && sudo rm /etc/kernel/postinst.d/nvidia
@@ -18,6 +19,7 @@ uninstall() {
 	#Delete rc.local changes
 	sudo sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
+	#Delete the actual nvidia driver that was downloaded from the nvidia website
 	if [ -e /usr/src/nvidia/nvidia-driver ]
 	then
 		echo -n "Do you want to remove the NVIDIA driver that you downloaded and renamed (/usr/src/nvidia/nvidia-driver)? [Y/n]: " | fmt -w `tput cols`
@@ -35,6 +37,7 @@ uninstall() {
 		esac
 	fi
 
+	#If the driver was removed, delete the /usr/src/nvidia folder that this script created
 	if [[ "$DNR" != "true" ]]
 	then
 		[ -d /usr/src/nvidia ] && sudo rmdir /usr/src/nvidia 2>/dev/null
@@ -74,13 +77,17 @@ esac
 clear
 [ ! -d /usr/src/nvidia/ ] && sudo mkdir /usr/src/nvidia/
 
-[ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again.' | fmt -w `tput cols`; exit 1; }
+[ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again. There is no need to keep this file up to date since the script will download the newest version of it from the NVIDIA website if it is outdated.' | fmt -w `tput cols`; exit 1; }
 
 sudo chmod a+x /usr/src/nvidia/nvidia-driver
 
+#The actual update script
 (
 cat << 'nvidia_update'
 #!/bin/bash
+
+#The --update arg downloads the latest version of the driver from NVIDIA
+#if this one is outdated
 /usr/src/nvidia/nvidia-driver --update
 
 #Undo tty2.conf changes
@@ -111,14 +118,19 @@ nvidia_update
 
 sudo chmod a+x /usr/src/nvidia/nvidia_update.sh
 
+#The /etc/kernel/postinst.d/ directory contains scripts that automatically get run
+#immediately after a new kernel has been installed
 sudo mkdir -p /etc/kernel/postinst.d/
 
 (
 cat << 'postinst'
 #!/bin/bash
 #Delete 'exit 0' from rc.local for a second
+#Its easier to delete exit 0 temporarily than to try to paste text above it
 grep -q 'exit 0' /etc/rc.local && sed -i --follow-symlinks '/exit 0/d' /etc/rc.local
 #Make OS switch to tty2 on boot. tty2 is where the nvidia driver will be installed from
+#The "sleep 5" bit is necessary because lightdm tries to switch to tty7 at about the same time
+#so rc.local just makes sure that its the last one to switch
 echo '{ /bin/sleep 5; /bin/chvt 2; } &' >> /etc/rc.local
 #Restore 'exit 0' to rc.local
 echo 'exit 0' >> /etc/rc.local
