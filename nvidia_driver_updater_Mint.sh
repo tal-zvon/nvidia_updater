@@ -119,7 +119,7 @@ cat << 'postinst'
 #Delete 'exit 0' from rc.local for a second
 grep -q 'exit 0' /etc/rc.local && sed -i --follow-symlinks '/exit 0/d' /etc/rc.local
 #Make OS switch to tty2 on boot. tty2 is where the nvidia driver will be installed from
-echo '/bin/chvt 2' >> /etc/rc.local
+echo '{ /bin/sleep 5; /bin/chvt 2; } &' >> /etc/rc.local
 #Restore 'exit 0' to rc.local
 echo 'exit 0' >> /etc/rc.local
 #Modify tty2.conf to run the nvidia_update.sh script instead of asking for login credentials
