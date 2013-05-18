@@ -131,7 +131,7 @@ case "$answer" in
 	reboot
 	;;
 	*)
-	/usr/bin/chvt 1
+	/usr/bin/chvt 3
 	;;
 esac
 nvidia_update
