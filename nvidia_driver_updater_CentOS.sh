@@ -97,7 +97,7 @@ int main(void)
 auto-login
 ) | sudo tee /usr/src/nvidia/auto-login.c >/dev/null
 
-gcc -O3 -o /bin/auto-login /usr/src/nvidia/auto-login.c && sudo rm -f /usr/src/nvidia/auto-login.c
+sudo gcc -O3 -o /bin/auto-login /usr/src/nvidia/auto-login.c && sudo rm -f /usr/src/nvidia/auto-login.c
 
 #The actual update script
 (
