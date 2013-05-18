@@ -19,7 +19,7 @@ uninstall() {
 	sudo sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
 	#Delete /root/.bash_profile changes
-	sed -i '/nvidia_updater/d' /root/.bash_profile
+	sed -i '/nvidia_update/d' /root/.bash_profile
 
 	#Delete /bin/auto-login
 	[ -e /bin/auto-login ] && sudo rm -f /bin/auto-login
@@ -120,7 +120,7 @@ fi
 sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
 #Delete /root/.bash_profile changes
-sed -i '/nvidia_updater/d' /root/.bash_profile
+sed -i '/nvidia_update/d' /root/.bash_profile
 
 #Reboot
 echo -n "Do you want to reboot? [Y/n]: " | fmt -w `tput cols`
