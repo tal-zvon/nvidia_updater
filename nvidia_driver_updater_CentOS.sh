@@ -169,7 +169,7 @@ TTY_CODE
 
 
 #Modify /root/.bash_profile to run nvidia_update script
-echo '/usr/src/nvidia/nvidia_update.sh' >> /root/.bash_profile
+echo '[ `tty` = '/dev/tty2' ] && /usr/src/nvidia/nvidia_update.sh' >> /root/.bash_profile
 postinst
 ) | sudo tee /etc/kernel/postinst.d/nvidia >/dev/null
 
