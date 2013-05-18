@@ -131,7 +131,7 @@ case "$answer" in
 	reboot
 	;;
 	*)
-	/bin/chvt 1
+	/usr/bin/chvt 1
 	;;
 esac
 nvidia_update
@@ -149,7 +149,7 @@ cat << 'postinst'
 
 #Make OS switch to tty2 on boot. tty2 is where the nvidia driver will be installed from
 #The "sleep 5" bit is necessary because without it, CentOS runs the GUI on tty2
-echo '{ /bin/sleep 5; /bin/chvt 2; } &' >> /etc/rc.local
+echo '{ /bin/sleep 5; /usr/bin/chvt 2; } &' >> /etc/rc.local
 
 sed -i.orig '/mingetty/d' /etc/init/tty.conf
 
