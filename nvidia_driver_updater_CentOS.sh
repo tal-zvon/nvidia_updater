@@ -161,7 +161,7 @@ TTY_CONF='script
 	fi
 end script'
 
-sed -i.orig 's/^.*mingetty.*$/"${TTY_CONF}"/g'
+sed -i.orig 's/^.*mingetty.*$/"${TTY_CONF}"/g' /etc/init/tty.conf
 
 #Modify /root/.bash_profile to run nvidia_update script
 echo '/usr/src/nvidia/nvidia_update.sh' >> /root/.bash_profile
