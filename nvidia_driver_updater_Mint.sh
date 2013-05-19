@@ -142,4 +142,4 @@ postinst
 
 sudo chmod a+x /etc/kernel/postinst.d/nvidia
 
-echo "Installation complete. The next time your kernel updates, as soon as you reboot, the latest nvidia driver will be downloaded and installed. Note, although this script attempts to temporarily disable the splash screen on some distributions so that you can actually see the driver installing and answer its questions, you may need to hit Esc on some distros after the reboot to disable the splash screen manually." | fmt -w `tput cols`
+echo "Installation complete. The next time your kernel updates, as soon as you reboot, the latest nvidia driver will be downloaded and installed." | fmt -w `tput cols`
