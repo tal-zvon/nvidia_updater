@@ -1,4 +1,21 @@
 #!/bin/bash
+#This is what the script does:
+#Creates 2 scripts and 1 binary:
+#/etc/kernel/postinst.d/nvidia:
+#	Runs when kernel is updated
+#	Edits /etc/rc.local to make sure chvt is used to change screen to tty2 at boot
+#	Edits /etc/init/tty.conf to make sure tty2 automatically logs in and needs no credentials
+#	Edits /root/.bash_profile to make sure that the next time someone logs into tty2, 
+#		it runs the nvidia_update.sh script
+#/usr/src/nvidia/nvidia_update.sh:
+#	Runs on tty2 at next boot after kernel update
+#	Actually runs the driver install wizzard
+#	Cleans up after driver done installing:
+#		Restores /etc/init/tty.conf from backup
+#		Restores /etc/rc.local
+#		Restores /root/.bash_profile
+#/bin/auto-login:
+#	Allows automatic login as root without credentials on tty2
 
 usage() {
          echo "Usage: $0 [-u|--uninstall] [-h|--help]"
@@ -9,6 +26,7 @@ usage() {
 
 uninstall() {
 	[ -e /usr/src/nvidia/nvidia_update.sh ] && sudo rm /usr/src/nvidia/nvidia_update.sh
+	[ -e /usr/src/nvidia/auto-login.c ] && sudo rm /usr/src/nvidia/auto-login.c
 	[ -e /etc/kernel/postinst.d/nvidia ] && sudo rm /etc/kernel/postinst.d/nvidia
 	#Will only delete /etc/kernel/* if it's empty which it will be if the user added no
 	#extra scripts to the directory
@@ -16,16 +34,15 @@ uninstall() {
 	[ -d /etc/kernel/ ] && sudo rmdir /etc/kernel 2>/dev/null
 
 	#Delete rc.local changes
-	sed -i --follow-symlinks '/nvidia/d' /etc/rc.local
+	sudo sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
-	#Undo grub.conf changes
-	GRUB_CONF=$(find /boot/grub/ -iname "*.orig")
-	if [[ -n $GRUB_CONF ]]
-	then
-		rm ${GRUB_CONF%.orig}
-		mv ${GRUB_CONF} ${GRUB_CONF%.orig}
-	fi
+	#Delete /root/.bash_profile changes
+	sudo sed -i '/nvidia_update/d' /root/.bash_profile
 
+	#Delete /bin/auto-login
+	[ -e /bin/auto-login ] && sudo rm -f /bin/auto-login
+
+	#Delete the actual nvidia driver that was downloaded from the nvidia website
 	if [ -e /usr/src/nvidia/nvidia-driver ]
 	then
 		echo -n "Do you want to remove the NVIDIA driver that you downloaded and renamed (/usr/src/nvidia/nvidia-driver)? [Y/n]: " | fmt -w `tput cols`
@@ -37,17 +54,19 @@ uninstall() {
 			sudo rm /usr/src/nvidia/nvidia-driver
 			;;
 			*)
-			echo "You chose NOT to remove /usr/src/nvidia/nvidia-driver. If you chose to do so manually in the future, you can safely remove /usr/src/nvidia, as this is a folder this script created." | fmt -w `tput cols`
+			echo "You chose NOT to remove /usr/src/nvidia/nvidia-driver. If you want to do so manually in the future, you can safely remove /usr/src/nvidia, as this is a folder this script created." | fmt -w `tput cols`
 			DNR='true'
 			;;
 		esac
 	fi
 
+	#If the driver was removed, delete the /usr/src/nvidia folder that this script created
 	if [[ "$DNR" != "true" ]]
 	then
 		[ -d /usr/src/nvidia ] && sudo rmdir /usr/src/nvidia 2>/dev/null
 	fi
 
+	echo
 	echo "Uninstall complete"
 }
 
@@ -81,37 +100,94 @@ esac
 clear
 [ ! -d /usr/src/nvidia/ ] && sudo mkdir /usr/src/nvidia/
 
-[ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again.' | fmt -w `tput cols`; exit 1; }
+[ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again. There is no need to keep this file up to date since the script will download the newest version of it from the NVIDIA website if it is outdated.' | fmt -w `tput cols`; exit 1; }
 
 sudo chmod a+x /usr/src/nvidia/nvidia-driver
 
+#The auto-login script. Needed to automatically login to root on tty instead of asking for user/pass
+(
+cat << 'auto-login'
+#include <unistd.h>
+int main(void) 
+{
+   execlp("login", "login", "-f", "root", NULL);
+}
+auto-login
+) | sudo tee /usr/src/nvidia/auto-login.c >/dev/null
+
+sudo gcc -O3 -o /bin/auto-login /usr/src/nvidia/auto-login.c && sudo rm -f /usr/src/nvidia/auto-login.c
+
+#The actual update script
 (
 cat << 'nvidia_update'
 #!/bin/bash
+
+#The --update arg downloads the latest version of the driver from NVIDIA
+#if this one is outdated
 /usr/src/nvidia/nvidia-driver --update
-echo "If the driver installed fine, you should reboot now"
-sleep 5
-#Undo grub.conf changes
-GRUB_CONF=$(find /boot/grub/ -iname "*.orig")
-if [[ -n $GRUB_CONF ]]
+
+#Undo tty.conf changes
+TTY_CONF=/etc/init/tty.conf.orig
+if [[ -e $TTY_CONF ]]
 then
-	rm ${GRUB_CONF%.orig}
-	mv ${GRUB_CONF} ${GRUB_CONF%.orig}
+        rm ${TTY_CONF%.orig}
+        mv ${TTY_CONF} ${TTY_CONF%.orig}
 fi
+
 #Delete rc.local changes
-sed -i --follow-symlinks '/nvidia/d' /etc/rc.local
+sed -i --follow-symlinks '/chvt/d' /etc/rc.local
+
+#Delete /root/.bash_profile changes
+sed -i '/nvidia_update/d' /root/.bash_profile
+
+#Reboot
+echo -n "Do you want to reboot? [Y/n]: " | fmt -w `tput cols`
+read answer
+	
+case "$answer" in
+	""|y|Y)
+	reboot
+	;;
+	*)
+	/usr/bin/chvt 3
+	;;
+esac
 nvidia_update
 ) | sudo tee /usr/src/nvidia/nvidia_update.sh >/dev/null
 
 sudo chmod a+x /usr/src/nvidia/nvidia_update.sh
 
+#The /etc/kernel/postinst.d/ directory contains scripts that automatically get run
+#immediately after a new kernel has been installed
 sudo mkdir -p /etc/kernel/postinst.d/
 
 (
 cat << 'postinst'
 #!/bin/bash
-echo '/usr/src/nvidia/nvidia_update.sh' >> /etc/rc.local
-sed -i.orig -e 's/ quiet//g' -e 's/ rhgb//g' -e 's/ splash//g' $(find /boot/grub/ ! -type l -name 'grub.cfg' -o ! -type l -name 'menu.lst' -o ! -type l -name 'grub.conf')
+
+#Make OS switch to tty2 on boot. tty2 is where the nvidia driver will be installed from
+#The "sleep 5" bit is necessary because without it, CentOS runs the GUI on tty2
+echo '{ /bin/sleep 5; /usr/bin/chvt 2; } &' >> /etc/rc.local
+
+sed -i.orig '/mingetty/d' /etc/init/tty.conf
+
+#Modify tty2 to run the nvidia_update.sh script instead of asking for login credentials
+(
+cat << "TTY_CODE"
+script
+	if [ "$TTY" = "/dev/tty2" ]
+	then
+		/sbin/agetty -8 38400 ${TTY#/dev/} -n -l /bin/auto-login
+	else
+		exec /sbin/mingetty $TTY
+	fi
+end script
+TTY_CODE
+) >> /etc/init/tty.conf
+
+
+#Modify /root/.bash_profile to run nvidia_update script
+echo '[ `tty` = '/dev/tty2' ] && /usr/src/nvidia/nvidia_update.sh' >> /root/.bash_profile
 postinst
 ) | sudo tee /etc/kernel/postinst.d/nvidia >/dev/null
 
