@@ -157,7 +157,7 @@ cat << "TTY_CODE"
 script
 	if [ "$TTY" = "/dev/tty2" ]
 	then
-		/sbin/mingetty --autologin root $TTY
+		exec /sbin/mingetty --autologin root $TTY
 	else
 		exec /sbin/mingetty $TTY
 	fi
