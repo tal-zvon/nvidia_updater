@@ -1,6 +1,6 @@
 #!/bin/bash
 #This is what the script does:
-#Creates 2 scripts and 1 binary:
+#Creates 2 scripts:
 #/etc/kernel/postinst.d/nvidia:
 #	Runs when kernel is updated
 #	Edits /etc/rc.local to make sure chvt is used to change screen to tty2 at boot
@@ -14,8 +14,6 @@
 #		Restores /etc/init/tty.conf from backup
 #		Restores /etc/rc.local
 #		Restores /root/.bash_profile
-#/bin/auto-login:
-#	Allows automatic login as root without credentials on tty2
 
 usage() {
          echo "Usage: $0 [-u|--uninstall] [-h|--help]"
@@ -26,7 +24,6 @@ usage() {
 
 uninstall() {
 	[ -e /usr/src/nvidia/nvidia_update.sh ] && sudo rm /usr/src/nvidia/nvidia_update.sh
-	[ -e /usr/src/nvidia/auto-login.c ] && sudo rm /usr/src/nvidia/auto-login.c
 	[ -e /etc/kernel/postinst.d/nvidia ] && sudo rm /etc/kernel/postinst.d/nvidia
 	#Will only delete /etc/kernel/* if it's empty which it will be if the user added no
 	#extra scripts to the directory
@@ -38,9 +35,6 @@ uninstall() {
 
 	#Delete /root/.bash_profile changes
 	sudo sed -i '/nvidia_update/d' /root/.bash_profile
-
-	#Delete /bin/auto-login
-	[ -e /bin/auto-login ] && sudo rm -f /bin/auto-login
 
 	#Delete the actual nvidia driver that was downloaded from the nvidia website
 	if [ -e /usr/src/nvidia/nvidia-driver ]
@@ -96,28 +90,12 @@ case "$1" in
 	;;
 esac
 
-clear
-#Check if gcc installed
-which gcc &>/dev/null || { echo "You need gcc, but it is not installed. Please run \"sudo yum install gcc\" to install it, and then rerun this script." | fmt -w `tput cols`; exit 0; }
-
 [ ! -d /usr/src/nvidia/ ] && sudo mkdir /usr/src/nvidia/
 
+clear
 [ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again. There is no need to keep this file up to date since the script will download the newest version of it from the NVIDIA website if it is outdated.' | fmt -w `tput cols`; exit 1; }
 
 sudo chmod a+x /usr/src/nvidia/nvidia-driver
-
-#The auto-login script. Needed to automatically login to root on tty instead of asking for user/pass
-(
-cat << 'auto-login'
-#include <unistd.h>
-int main(void) 
-{
-   execlp("login", "login", "-f", "root", NULL);
-}
-auto-login
-) | sudo tee /usr/src/nvidia/auto-login.c >/dev/null
-
-sudo gcc -O3 -o /bin/auto-login /usr/src/nvidia/auto-login.c && sudo rm -f /usr/src/nvidia/auto-login.c
 
 #The actual update script
 (
@@ -179,7 +157,7 @@ cat << "TTY_CODE"
 script
 	if [ "$TTY" = "/dev/tty2" ]
 	then
-		/sbin/agetty -8 38400 ${TTY#/dev/} -n -l /bin/auto-login
+		exec /sbin/mingetty --autologin root $TTY
 	else
 		exec /sbin/mingetty $TTY
 	fi
