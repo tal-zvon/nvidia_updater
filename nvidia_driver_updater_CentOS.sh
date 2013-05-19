@@ -37,7 +37,7 @@ uninstall() {
 	sudo sed -i --follow-symlinks '/chvt/d' /etc/rc.local
 
 	#Delete /root/.bash_profile changes
-	sed -i '/nvidia_update/d' /root/.bash_profile
+	sudo sed -i '/nvidia_update/d' /root/.bash_profile
 
 	#Delete /bin/auto-login
 	[ -e /bin/auto-login ] && sudo rm -f /bin/auto-login
