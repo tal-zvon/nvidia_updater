@@ -150,7 +150,6 @@ case "$answer" in
 	;;
 	*)
 	/usr/bin/chvt 3
-	exit 0
 	;;
 esac
 nvidia_update
