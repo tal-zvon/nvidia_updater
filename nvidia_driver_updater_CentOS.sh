@@ -96,8 +96,10 @@ case "$1" in
 	;;
 esac
 
-
 clear
+#Check if gcc installed
+which gcc &>/dev/null || { echo "You need gcc, but it is not installed. Please run \"sudo yum install gcc\" to install it, and then rerun this script." | fmt -w `tput cols`; exit 0; }
+
 [ ! -d /usr/src/nvidia/ ] && sudo mkdir /usr/src/nvidia/
 
 [ -e /usr/src/nvidia/nvidia-driver ] || { echo 'You must first download the right NVIDIA driver from http://www.nvidia.com/Download/index.aspx. It will be named something similar to "NVIDIA-Linux-x86_64-319.17.run". Rename the file to "nvidia-driver" and move it to /usr/src/nvidia/. Once you have done this, run this script again. There is no need to keep this file up to date since the script will download the newest version of it from the NVIDIA website if it is outdated.' | fmt -w `tput cols`; exit 1; }
