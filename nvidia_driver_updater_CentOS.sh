@@ -1,4 +1,21 @@
 #!/bin/bash
+#This is what the script does:
+#Creates 2 scripts and 1 binary:
+#/etc/kernel/postinst.d/nvidia:
+#	Runs when kernel is updated
+#	Edits /etc/rc.local to make sure chvt is used to change screen to tty2 at boot
+#	Edits /etc/init/tty.conf to make sure tty2 automatically logs in and needs no credentials
+#	Edits /root/.bash_profile to make sure that the next time someone logs into tty2, 
+#		it runs the nvidia_update.sh script
+#/usr/src/nvidia/nvidia_update.sh:
+#	Runs on tty2 at next boot after kernel update
+#	Actually runs the driver install wizzard
+#	Cleans up after driver done installing:
+#		Restores /etc/init/tty.conf from backup
+#		Restores /etc/rc.local
+#		Restores /root/.bash_profile
+#/bin/auto-login:
+#	Allows automatic login as root without credentials on tty2
 
 usage() {
          echo "Usage: $0 [-u|--uninstall] [-h|--help]"
