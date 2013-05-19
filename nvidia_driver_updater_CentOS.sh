@@ -9,6 +9,7 @@ usage() {
 
 uninstall() {
 	[ -e /usr/src/nvidia/nvidia_update.sh ] && sudo rm /usr/src/nvidia/nvidia_update.sh
+	[ -e /usr/src/nvidia/auto-login.c ] && sudo rm /usr/src/nvidia/auto-login.c
 	[ -e /etc/kernel/postinst.d/nvidia ] && sudo rm /etc/kernel/postinst.d/nvidia
 	#Will only delete /etc/kernel/* if it's empty which it will be if the user added no
 	#extra scripts to the directory
